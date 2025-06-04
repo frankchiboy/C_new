@@ -49,6 +49,7 @@ interface ProjectContextType {
   createRisk: (risk: Partial<Risk>) => string;
   updateRisk: (id: string, updates: Partial<Risk>) => void;
   deleteRisk: (id: string) => void;
+  manualSnapshot: () => Promise<boolean>;
   undo: () => void;
   redo: () => void;
   canUndo: boolean;
@@ -408,6 +409,18 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setDirty();
   };
 
+  // 手動建立快照
+  const manualSnapshot = async (): Promise<boolean> => {
+    try {
+      const data = { project, tasks, resources, costs, risks };
+      await createSnapshot(data, project.id, 'Manual');
+      return true;
+    } catch (error) {
+      console.error('建立快照失敗:', error);
+      return false;
+    }
+  };
+
   // 撤消操作
   const undo = () => {
     if (undoStack.length === 0) return;
@@ -505,6 +518,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     createRisk,
     updateRisk,
     deleteRisk,
+    manualSnapshot,
     undo,
     redo,
     canUndo,
