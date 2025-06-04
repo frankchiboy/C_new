@@ -9,7 +9,8 @@ import {
   Cost,
   Risk,
   Snapshot,
-  RecentProject
+  RecentProject,
+  ProjectState
 } from '../types';
 
 interface ProjectFileData {
@@ -24,6 +25,7 @@ interface ProjectFileData {
 interface FileSystemContextType {
   saveFile: (data: ProjectFileData, filename: string) => Promise<boolean>;
   loadFile: (id: string) => Promise<ProjectFileData | null>;
+  importFile: (file: File) => Promise<ProjectFileData | null>;
   createSnapshot: (data: ProjectFileData, projectId: string, type: SnapshotType) => Promise<boolean>;
   getSnapshots: (projectId: string) => Promise<Snapshot[]>;
   restoreSnapshot: (snapshotId: string) => Promise<ProjectFileData | null>;
@@ -149,6 +151,67 @@ export const FileSystemProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   };
 
+  // 從使用者選擇的檔案匯入專案
+  const importFile = async (file: File): Promise<ProjectFileData | null> => {
+    try {
+      let data: ProjectFileData | null = null;
+
+      if (file.name.endsWith('.mpproj')) {
+        const zip = await JSZip.loadAsync(file);
+        const projectStr = await zip.file('project.json')?.async('string');
+        const tasksStr = await zip.file('tasks.json')?.async('string');
+        const resourcesStr = await zip.file('resources.json')?.async('string');
+        const costsStr = await zip.file('cost.json')?.async('string');
+        const risksStr = await zip.file('risklog.json')?.async('string');
+
+        if (projectStr) {
+          const projectData = JSON.parse(projectStr);
+          const project: Project = {
+            id: projectData.project_uuid || projectData.id,
+            name: projectData.project_name,
+            description: projectData.description,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            startDate: projectData.start_date,
+            endDate: projectData.end_date,
+            createdBy: projectData.created_by || 'import',
+            currentState: ProjectState.SAVED,
+            hasUnsavedChanges: false,
+            isUntitled: false
+          };
+
+          data = {
+            project,
+            tasks: tasksStr ? JSON.parse(tasksStr) : [],
+            resources: resourcesStr ? JSON.parse(resourcesStr) : [],
+            costs: costsStr ? JSON.parse(costsStr) : [],
+            risks: risksStr ? JSON.parse(risksStr) : []
+          };
+        }
+      } else {
+        // 預設當作 JSON 解析
+        const text = await file.text();
+        data = JSON.parse(text);
+      }
+
+      if (data) {
+        localStorage.setItem(`project_${data.project.id}`, JSON.stringify(data));
+        await addRecentProject({
+          fileName: file.name,
+          filePath: file.name,
+          openedAt: new Date().toISOString(),
+          projectUUID: data.project.id,
+          isTemporary: data.project.isUntitled
+        });
+      }
+
+      return data;
+    } catch (error) {
+      console.error('匯入檔案失敗:', error);
+      return null;
+    }
+  };
+
   // 創建快照
   const createSnapshot = async (
     data: ProjectFileData,
@@ -241,6 +304,7 @@ export const FileSystemProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const contextValue: FileSystemContextType = {
     saveFile,
     loadFile,
+    importFile,
     createSnapshot,
     getSnapshots,
     restoreSnapshot,
