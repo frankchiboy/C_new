@@ -1,17 +1,34 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
-import { SnapshotType } from '../types';
+import {
+  SnapshotType,
+  Project,
+  Task,
+  Resource,
+  Cost,
+  Risk,
+  Snapshot,
+  RecentProject
+} from '../types';
+
+interface ProjectFileData {
+  project: Project;
+  tasks: Task[];
+  resources: Resource[];
+  costs: Cost[];
+  risks: Risk[];
+}
 
 // 檔案系統上下文類型
 interface FileSystemContextType {
-  saveFile: (data: any, filename: string) => Promise<boolean>;
-  loadFile: (id: string) => Promise<any>;
-  createSnapshot: (data: any, projectId: string, type: SnapshotType) => Promise<boolean>;
-  getSnapshots: (projectId: string) => Promise<any[]>;
-  restoreSnapshot: (snapshotId: string) => Promise<any>;
-  getRecentProjects: () => Promise<any[]>;
-  addRecentProject: (project: any) => Promise<void>;
+  saveFile: (data: ProjectFileData, filename: string) => Promise<boolean>;
+  loadFile: (id: string) => Promise<ProjectFileData | null>;
+  createSnapshot: (data: ProjectFileData, projectId: string, type: SnapshotType) => Promise<boolean>;
+  getSnapshots: (projectId: string) => Promise<Snapshot[]>;
+  restoreSnapshot: (snapshotId: string) => Promise<ProjectFileData | null>;
+  getRecentProjects: () => Promise<RecentProject[]>;
+  addRecentProject: (project: RecentProject) => Promise<void>;
 }
 
 // 創建檔案系統上下文
@@ -19,8 +36,8 @@ const FileSystemContext = createContext<FileSystemContextType | undefined>(undef
 
 // 檔案系統Provider元件
 export const FileSystemProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [recentProjects, setRecentProjects] = useState<any[]>([]);
-  const [snapshots, setSnapshots] = useState<any[]>([]);
+  const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
+  const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
 
   // 初始化從localStorage加載資料
   useEffect(() => {
@@ -40,7 +57,7 @@ export const FileSystemProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, []);
 
   // 儲存檔案
-  const saveFile = async (data: any, filename: string): Promise<boolean> => {
+  const saveFile = async (data: ProjectFileData, filename: string): Promise<boolean> => {
     try {
       // 建立 .mpproj 格式檔案
       const zip = new JSZip();
@@ -117,7 +134,7 @@ export const FileSystemProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   // 載入檔案
-  const loadFile = async (id: string): Promise<any> => {
+  const loadFile = async (id: string): Promise<ProjectFileData | null> => {
     try {
       // 從localStorage載入資料
       const storedData = localStorage.getItem(`project_${id}`);
@@ -133,7 +150,7 @@ export const FileSystemProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // 創建快照
   const createSnapshot = async (
-    data: any, 
+    data: ProjectFileData,
     projectId: string, 
     type: SnapshotType
   ): Promise<boolean> => {
@@ -172,12 +189,12 @@ export const FileSystemProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   // 獲取特定專案的快照
-  const getSnapshots = async (projectId: string): Promise<any[]> => {
+  const getSnapshots = async (projectId: string): Promise<Snapshot[]> => {
     return snapshots.filter(snapshot => snapshot.projectId === projectId);
   };
 
   // 還原快照
-  const restoreSnapshot = async (snapshotId: string): Promise<any> => {
+  const restoreSnapshot = async (snapshotId: string): Promise<ProjectFileData | null> => {
     try {
       const snapshotData = localStorage.getItem(snapshotId);
       if (snapshotData) {
@@ -191,12 +208,12 @@ export const FileSystemProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   // 獲取最近專案清單
-  const getRecentProjects = async (): Promise<any[]> => {
+  const getRecentProjects = async (): Promise<RecentProject[]> => {
     return recentProjects;
   };
 
   // 添加到最近專案清單
-  const addRecentProject = async (project: any): Promise<void> => {
+  const addRecentProject = async (project: RecentProject): Promise<void> => {
     // 最多保留10個最近專案
     const updatedProjects = [
       project,

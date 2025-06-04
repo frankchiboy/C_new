@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { Calendar, Plus, FolderOpen, Clock, FileCheck } from 'lucide-react';
 import { useFileSystem } from '../contexts/FileSystemContext';
 import { useProject } from '../contexts/ProjectContext';
+import { RecentProject } from '../types';
 
 const WelcomePage: React.FC = () => {
   const navigate = useNavigate();
   const { getRecentProjects } = useFileSystem();
   const { createProject } = useProject();
-  const [recentProjects, setRecentProjects] = useState<any[]>([]);
+  const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
   const [loading, setLoading] = useState(true);
 
   // 載入最近專案清單
@@ -34,9 +35,10 @@ const WelcomePage: React.FC = () => {
   };
 
   // 處理開啟專案
+  const { loadProject } = useProject();
+
   const handleOpenProject = async (projectId: string) => {
     try {
-      const { loadProject } = useProject();
       const success = await loadProject(projectId);
       if (success) {
         navigate(`/project/${projectId}`);
