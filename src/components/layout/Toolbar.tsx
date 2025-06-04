@@ -1,9 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Save, FilePlus, FolderOpen, Undo, Redo, 
+import {
+  Save, FilePlus, FolderOpen, Undo, Redo,
   Menu, ZoomIn, ZoomOut, Calendar, ChevronDown,
-  Download, Printer, Settings, Camera
+  Download, Printer, Settings, Camera, Clock
 } from 'lucide-react';
 import { useProject } from '../../contexts/ProjectContext';
 import { useUI } from '../../contexts/UIContext';
@@ -46,6 +46,10 @@ const Toolbar: React.FC = () => {
 
   const handleSnapshot = async () => {
     await manualSnapshot();
+  };
+
+  const handleShowSnapshots = () => {
+    openDialog('snapshots');
   };
 
   // 處理開啟專案
@@ -130,6 +134,13 @@ const Toolbar: React.FC = () => {
           >
             <Camera size={18} className="mr-1.5" />
             快照
+          </button>
+          <button
+            onClick={handleShowSnapshots}
+            className="px-3 py-1.5 rounded-md text-sm flex items-center hover:bg-gray-100 transition-colors"
+          >
+            <Clock size={18} className="mr-1.5" />
+            快照清單
           </button>
         </div>
         

@@ -27,6 +27,7 @@ interface FileSystemContextType {
   createSnapshot: (data: ProjectFileData, projectId: string, type: SnapshotType) => Promise<boolean>;
   getSnapshots: (projectId: string) => Promise<Snapshot[]>;
   restoreSnapshot: (snapshotId: string) => Promise<ProjectFileData | null>;
+  deleteSnapshot: (snapshotId: string) => Promise<void>;
   getRecentProjects: () => Promise<RecentProject[]>;
   addRecentProject: (project: RecentProject) => Promise<void>;
 }
@@ -207,6 +208,18 @@ export const FileSystemProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   };
 
+  // 刪除快照
+  const deleteSnapshot = async (snapshotId: string): Promise<void> => {
+    try {
+      localStorage.removeItem(snapshotId);
+      const updated = snapshots.filter(s => s.id !== snapshotId);
+      setSnapshots(updated);
+      localStorage.setItem('projectSnapshots', JSON.stringify(updated));
+    } catch (error) {
+      console.error('刪除快照失敗:', error);
+    }
+  };
+
   // 獲取最近專案清單
   const getRecentProjects = async (): Promise<RecentProject[]> => {
     return recentProjects;
@@ -231,6 +244,7 @@ export const FileSystemProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     createSnapshot,
     getSnapshots,
     restoreSnapshot,
+    deleteSnapshot,
     getRecentProjects,
     addRecentProject
   };
