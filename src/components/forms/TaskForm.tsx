@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, BarChart2, Users, FileText } from 'lucide-react';
+import { Calendar, Clock, BarChart2, FileText } from 'lucide-react';
 import { useProject } from '../../contexts/ProjectContext';
 import dayjs from 'dayjs';
 import { Task, TaskType, DependencyType } from '../../types';
@@ -7,12 +7,12 @@ import { Task, TaskType, DependencyType } from '../../types';
 interface TaskFormProps {
   mode: 'create' | 'edit';
   taskId: string | null;
-  onSubmit: (taskData: any) => void;
+  onSubmit: (taskData: Partial<Task>) => void;
   onCancel: () => void;
 }
 
 const TaskForm: React.FC<TaskFormProps> = ({ mode, taskId, onSubmit, onCancel }) => {
-  const { tasks, resources } = useProject();
+  const { tasks } = useProject();
   
   // 表單初始狀態
   const initialState = {

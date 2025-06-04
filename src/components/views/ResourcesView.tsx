@@ -1,10 +1,107 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Plus, Edit2, Trash2 } from 'lucide-react';
+import { useProject } from '../../contexts/ProjectContext';
+import ResourceForm from '../forms/ResourceForm';
+import { Resource } from '../../types';
 
 const ResourcesView: React.FC = () => {
+  const { resources, createResource, updateResource, deleteResource } = useProject();
+  const [selected, setSelected] = useState<string | null>(null);
+  const [mode, setMode] = useState<'create' | 'edit'>('create');
+  const [showForm, setShowForm] = useState(false);
+
+  const handleAdd = () => {
+    setMode('create');
+    setSelected(null);
+    setShowForm(true);
+  };
+
+  const handleEdit = (id: string) => {
+    setMode('edit');
+    setSelected(id);
+    setShowForm(true);
+  };
+
+  const handleDelete = (id: string) => {
+    if (window.confirm('確定要刪除此資源嗎？')) {
+      deleteResource(id);
+    }
+  };
+
+  const handleSubmit = (data: Partial<Resource>) => {
+    if (mode === 'create') {
+      createResource(data);
+    } else if (selected) {
+      updateResource(selected, data);
+    }
+    setShowForm(false);
+  };
+
   return (
-    <div className="flex-1 p-6">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4">資源管理視圖</h2>
-      <p className="text-gray-600">資源管理視圖即將推出...</p>
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold text-gray-800">資源管理</h2>
+        <button
+          onClick={handleAdd}
+          className="flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+        >
+          <Plus size={16} className="mr-1" /> 新增資源
+        </button>
+      </div>
+
+      {resources.length > 0 ? (
+        <table className="min-w-full bg-white border border-gray-200 text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-3 py-2 border-b text-left">名稱</th>
+              <th className="px-3 py-2 border-b text-left">類型</th>
+              <th className="px-3 py-2 border-b text-left">費率</th>
+              <th className="px-3 py-2 border-b text-left">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {resources.map(r => (
+              <tr key={r.id} className="border-b hover:bg-gray-50">
+                <td className="px-3 py-2">{r.name}</td>
+                <td className="px-3 py-2">{r.type === 'human' ? '人力' : '設備'}</td>
+                <td className="px-3 py-2">{r.ratePerHour}</td>
+                <td className="px-3 py-2 space-x-1">
+                  <button
+                    onClick={() => handleEdit(r.id)}
+                    className="p-1 text-gray-500 hover:text-blue-600"
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(r.id)}
+                    className="p-1 text-gray-500 hover:text-red-600"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <div className="p-8 text-center text-gray-500">尚未建立任何資源</div>
+      )}
+
+      {showForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              {mode === 'create' ? '新增資源' : '編輯資源'}
+            </h3>
+            <ResourceForm
+              mode={mode}
+              resourceId={selected}
+              onSubmit={handleSubmit}
+              onCancel={() => setShowForm(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

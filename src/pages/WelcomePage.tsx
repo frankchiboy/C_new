@@ -1,14 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Plus, FolderOpen, Clock, FileCheck } from 'lucide-react';
+import {
+  Calendar,
+  Plus,
+  FolderOpen,
+  Clock,
+  FileCheck
+} from 'lucide-react';
 import { useFileSystem } from '../contexts/FileSystemContext';
 import { useProject } from '../contexts/ProjectContext';
+import { RecentProject } from '../types';
 
 const WelcomePage: React.FC = () => {
   const navigate = useNavigate();
-  const { getRecentProjects } = useFileSystem();
-  const { createProject } = useProject();
-  const [recentProjects, setRecentProjects] = useState<any[]>([]);
+  const { getRecentProjects, importFile } = useFileSystem();
+  const { createProject, loadProject } = useProject();
+  const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
   const [loading, setLoading] = useState(true);
 
   // 載入最近專案清單
@@ -33,10 +40,9 @@ const WelcomePage: React.FC = () => {
     navigate(`/project/${newProject.id}`);
   };
 
-  // 處理開啟專案
+  // 從最近清單開啟專案
   const handleOpenProject = async (projectId: string) => {
     try {
-      const { loadProject } = useProject();
       const success = await loadProject(projectId);
       if (success) {
         navigate(`/project/${projectId}`);
@@ -47,6 +53,29 @@ const WelcomePage: React.FC = () => {
       console.error('開啟專案時發生錯誤:', error);
       alert('開啟專案時發生錯誤。');
     }
+  };
+
+  // 處理從檔案匯入
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const handleOpenFileClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const data = await importFile(file);
+      if (data) {
+        await loadProject(data.project.id);
+        navigate(`/project/${data.project.id}`);
+      } else {
+        alert('檔案格式無效或已損毀。');
+      }
+    }
+    e.target.value = '';
   };
 
   return (
@@ -75,10 +104,11 @@ const WelcomePage: React.FC = () => {
             <p className="mt-2 text-sm text-gray-600 text-center">
               從零開始建立一個新的專案計劃
             </p>
-          </button>
-          
-          {/* 開啟專案 */}
-          <button
+        </button>
+
+        {/* 開啟專案 */}
+        <button
+          onClick={handleOpenFileClick}
             className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors transform hover:scale-105 hover:shadow-md"
           >
             <FolderOpen size={36} className="text-gray-600 mb-4" />
@@ -86,10 +116,17 @@ const WelcomePage: React.FC = () => {
             <p className="mt-2 text-sm text-gray-600 text-center">
               從本機開啟現有的專案檔案
             </p>
-          </button>
-          
-          {/* 使用範本 */}
-          <button
+        </button>
+        <input
+          type="file"
+          accept=".mpproj,.json"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          className="hidden"
+        />
+
+        {/* 使用範本 */}
+        <button
             className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors transform hover:scale-105 hover:shadow-md"
           >
             <FileCheck size={36} className="text-gray-600 mb-4" />

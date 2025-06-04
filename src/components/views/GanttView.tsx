@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, Link } from 'lucide-react';
+import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { useProject } from '../../contexts/ProjectContext';
 import { useUI } from '../../contexts/UIContext';
 import TaskForm from '../forms/TaskForm';
+import { Task } from '../../types';
 
 const GanttView: React.FC = () => {
   const { tasks, createTask, updateTask, deleteTask } = useProject();
@@ -94,7 +95,7 @@ const GanttView: React.FC = () => {
   };
 
   // 提交任務表單
-  const handleTaskFormSubmit = (taskData: any) => {
+  const handleTaskFormSubmit = (taskData: Partial<Task>) => {
     if (taskFormMode === 'create') {
       createTask(taskData);
     } else {

@@ -182,5 +182,12 @@ export enum UndoActionType {
   MOVE_TASK = 'move-task',
   ASSIGN_RESOURCE = 'assign-resource',
   EDIT_RESOURCE = 'edit-resource',
-  EDIT_COST = 'edit-cost'
+  CREATE_RESOURCE = 'create-resource',
+  DELETE_RESOURCE = 'delete-resource',
+  EDIT_COST = 'edit-cost',
+  CREATE_COST = 'create-cost',
+  DELETE_COST = 'delete-cost',
+  EDIT_RISK = 'edit-risk',
+  CREATE_RISK = 'create-risk',
+  DELETE_RISK = 'delete-risk'
 }
