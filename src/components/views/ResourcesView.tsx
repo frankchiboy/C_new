@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { useProject } from '../../contexts/ProjectContext';
 import ResourceForm from '../forms/ResourceForm';
+import { Resource } from '../../types';
 
 const ResourcesView: React.FC = () => {
   const { resources, createResource, updateResource, deleteResource } = useProject();
@@ -27,7 +28,7 @@ const ResourcesView: React.FC = () => {
     }
   };
 
-  const handleSubmit = (data: any) => {
+  const handleSubmit = (data: Partial<Resource>) => {
     if (mode === 'create') {
       createResource(data);
     } else if (selected) {
