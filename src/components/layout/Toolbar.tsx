@@ -12,8 +12,14 @@ import { ProjectState } from '../../types';
 const Toolbar: React.FC = () => {
   const navigate = useNavigate();
   const {
-    project, createProject, saveProject, saveProjectAs,
-    canUndo, canRedo, undo, redo, manualSnapshot
+    project,
+    createProject,
+    saveProject,
+    canUndo,
+    canRedo,
+    undo,
+    redo,
+    manualSnapshot
   } = useProject();
   const { toggleSidebar, timeScale, setTimeScale, openDialog } = useUI();
 
