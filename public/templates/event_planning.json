@@ -1,0 +1,16 @@
+{
+  "project": {
+    "name": "活動企劃專案",
+    "description": "示範活動規劃流程",
+    "startDate": "2025-07-01",
+    "endDate": "2025-07-15"
+  },
+  "tasks": [
+    { "name": "場地預定", "startDate": "2025-07-01", "endDate": "2025-07-02", "progress": 0 },
+    { "name": "宣傳", "startDate": "2025-07-03", "endDate": "2025-07-07", "progress": 0 },
+    { "name": "執行", "startDate": "2025-07-08", "endDate": "2025-07-15", "progress": 0 }
+  ],
+  "resources": [],
+  "costs": [],
+  "risks": []
+}

@@ -12,7 +12,7 @@ import { ViewMode } from '../types';
 
 const ProjectPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { project, loadProject, createProject } = useProject();
+  const { loadProject, createProject } = useProject();
   const { activeView } = useUI();
   const [loading, setLoading] = useState(true);
 

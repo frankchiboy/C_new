@@ -1,0 +1,4 @@
+[
+  { "id": "software", "name": "軟體開發範本", "file": "software_project.json" },
+  { "id": "event", "name": "活動企劃範本", "file": "event_planning.json" }
+]
