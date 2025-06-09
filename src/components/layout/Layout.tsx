@@ -6,6 +6,9 @@ import Sidebar from './Sidebar';
 import Toolbar from './Toolbar';
 import StatusBar from './StatusBar';
 import SavePrompt from '../dialogs/SavePrompt';
+import SaveAsDialog from '../dialogs/SaveAsDialog';
+import SnapshotsDialog from '../dialogs/SnapshotsDialog';
+import TemplateDialog from '../dialogs/TemplateDialog';
 import { ProjectState } from '../../types';
 
 const Layout: React.FC = () => {
@@ -57,11 +60,18 @@ const Layout: React.FC = () => {
       
       {/* 儲存提示對話框 */}
       {showSavePrompt && (
-        <SavePrompt 
+        <SavePrompt
           onConfirm={handleConfirmNavigation}
           onCancel={handleCancelNavigation}
         />
       )}
+
+      {/* 另存新檔對話框 */}
+      {activeDialog === 'saveAs' && <SaveAsDialog />}
+      {/* 快照清單對話框 */}
+      {activeDialog === 'snapshots' && <SnapshotsDialog />}
+      {/* 範本選擇對話框 */}
+      {activeDialog === 'templates' && <TemplateDialog />}
     </div>
   );
 };

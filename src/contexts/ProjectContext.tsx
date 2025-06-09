@@ -1,11 +1,11 @@
-import React, { createContext, useContext, useReducer, useEffect, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import dayjs from 'dayjs';
-import { 
-  Project, Task, Resource, Cost, Risk, 
-  ProjectState, UndoItem, UndoActionType 
+import {
+  Project, Task, Resource, Cost, Risk,
+  ProjectState, UndoItem, UndoActionType
 } from '../types';
-import { useFileSystem } from './FileSystemContext';
+import { useFileSystem, ProjectFileData } from './FileSystemContext';
 
 // 初始專案狀態
 const initialProject: Project = {
@@ -35,6 +35,7 @@ interface ProjectContextType {
   saveProject: () => Promise<boolean>;
   saveProjectAs: (name: string) => Promise<boolean>;
   loadProject: (id: string) => Promise<boolean>;
+  loadProjectData: (data: ProjectFileData) => void;
   updateProject: (updates: Partial<Project>) => void;
   setDirty: () => void;
   createTask: (task: Partial<Task>) => string;
@@ -49,6 +50,7 @@ interface ProjectContextType {
   createRisk: (risk: Partial<Risk>) => string;
   updateRisk: (id: string, updates: Partial<Risk>) => void;
   deleteRisk: (id: string) => void;
+  manualSnapshot: () => Promise<boolean>;
   undo: () => void;
   redo: () => void;
   canUndo: boolean;
@@ -68,6 +70,16 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [risks, setRisks] = useState<Risk[]>([]);
   const [undoStack, setUndoStack] = useState<UndoItem[]>([]);
   const [redoStack, setRedoStack] = useState<UndoItem[]>([]);
+
+  // 自動快照計時器
+  useEffect(() => {
+    if (!project.id) return;
+    const interval = setInterval(() => {
+      const data = { project, tasks, resources, costs, risks };
+      createSnapshot(data, project.id, 'Auto');
+    }, 600000);
+    return () => clearInterval(interval);
+  }, [project.id, project, tasks, resources, costs, risks, createSnapshot]);
   
   // 計算是否可以撤消/重做
   const canUndo = undoStack.length > 0;
@@ -184,6 +196,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  // 以現有資料初始化專案（範本或快照）
+  const loadProjectData = (data: ProjectFileData) => {
+    setProject(data.project);
+    setTasks(data.tasks || []);
+    setResources(data.resources || []);
+    setCosts(data.costs || []);
+    setRisks(data.risks || []);
+    setUndoStack([]);
+    setRedoStack([]);
+  };
+
   // 更新專案資訊
   const updateProject = (updates: Partial<Project>) => {
     setProject(prev => ({ ...prev, ...updates }));
@@ -288,8 +311,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       ratePerHour: resourceData.ratePerHour || 0,
       contact: resourceData.contact || ''
     };
-    
+
     setResources(prev => [...prev, newResource]);
+    pushUndo({
+      type: UndoActionType.CREATE_RESOURCE,
+      targetId: id,
+      beforeState: {},
+      afterState: { resource: newResource }
+    });
     setDirty();
     return id;
   };
@@ -318,7 +347,21 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const deleteResource = (id: string) => {
-    setResources(prev => prev.filter(r => r.id !== id));
+    setResources(prev => {
+      const index = prev.findIndex(r => r.id === id);
+      if (index === -1) return prev;
+
+      const deleted = prev[index];
+
+      pushUndo({
+        type: UndoActionType.DELETE_RESOURCE,
+        targetId: id,
+        beforeState: { resource: deleted },
+        afterState: {}
+      });
+
+      return prev.filter(r => r.id !== id);
+    });
     setDirty();
   };
 
@@ -338,6 +381,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
     
     setCosts(prev => [...prev, newCost]);
+    pushUndo({
+      type: UndoActionType.CREATE_COST,
+      targetId: id,
+      beforeState: {},
+      afterState: { cost: newCost }
+    });
     setDirty();
     return id;
   };
@@ -366,7 +415,21 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const deleteCost = (id: string) => {
-    setCosts(prev => prev.filter(c => c.id !== id));
+    setCosts(prev => {
+      const index = prev.findIndex(c => c.id === id);
+      if (index === -1) return prev;
+
+      const deleted = prev[index];
+
+      pushUndo({
+        type: UndoActionType.DELETE_COST,
+        targetId: id,
+        beforeState: { cost: deleted },
+        afterState: {}
+      });
+
+      return prev.filter(c => c.id !== id);
+    });
     setDirty();
   };
 
@@ -386,6 +449,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
     
     setRisks(prev => [...prev, newRisk]);
+    pushUndo({
+      type: UndoActionType.CREATE_RISK,
+      targetId: id,
+      beforeState: {},
+      afterState: { risk: newRisk }
+    });
     setDirty();
     return id;
   };
@@ -394,18 +463,54 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setRisks(prev => {
       const index = prev.findIndex(r => r.id === id);
       if (index === -1) return prev;
-      
+
+      const oldRisk = prev[index];
+      const updated = { ...oldRisk, ...updates };
+
+      pushUndo({
+        type: UndoActionType.EDIT_RISK,
+        targetId: id,
+        beforeState: { risk: oldRisk },
+        afterState: { risk: updated }
+      });
+
       const newRisks = [...prev];
-      newRisks[index] = { ...newRisks[index], ...updates };
+      newRisks[index] = updated;
       return newRisks;
     });
-    
+
     setDirty();
   };
 
   const deleteRisk = (id: string) => {
-    setRisks(prev => prev.filter(r => r.id !== id));
+    setRisks(prev => {
+      const index = prev.findIndex(r => r.id === id);
+      if (index === -1) return prev;
+
+      const deleted = prev[index];
+
+      pushUndo({
+        type: UndoActionType.DELETE_RISK,
+        targetId: id,
+        beforeState: { risk: deleted },
+        afterState: {}
+      });
+
+      return prev.filter(r => r.id !== id);
+    });
     setDirty();
+  };
+
+  // 手動建立快照
+  const manualSnapshot = async (): Promise<boolean> => {
+    try {
+      const data = { project, tasks, resources, costs, risks };
+      await createSnapshot(data, project.id, 'Manual');
+      return true;
+    } catch (error) {
+      console.error('建立快照失敗:', error);
+      return false;
+    }
   };
 
   // 撤消操作
@@ -434,7 +539,61 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       case UndoActionType.DELETE_TASK:
         setTasks(prev => [...prev, action.beforeState.task as Task]);
         break;
-        
+
+      case UndoActionType.CREATE_RESOURCE:
+        setResources(prev => prev.filter(r => r.id !== action.targetId));
+        break;
+
+      case UndoActionType.EDIT_RESOURCE:
+        setResources(prev => {
+          const idx = prev.findIndex(r => r.id === action.targetId);
+          if (idx === -1) return prev;
+          const arr = [...prev];
+          arr[idx] = action.beforeState.resource as Resource;
+          return arr;
+        });
+        break;
+
+      case UndoActionType.DELETE_RESOURCE:
+        setResources(prev => [...prev, action.beforeState.resource as Resource]);
+        break;
+
+      case UndoActionType.CREATE_COST:
+        setCosts(prev => prev.filter(c => c.id !== action.targetId));
+        break;
+
+      case UndoActionType.EDIT_COST:
+        setCosts(prev => {
+          const idx = prev.findIndex(c => c.id === action.targetId);
+          if (idx === -1) return prev;
+          const arr = [...prev];
+          arr[idx] = action.beforeState.cost as Cost;
+          return arr;
+        });
+        break;
+
+      case UndoActionType.DELETE_COST:
+        setCosts(prev => [...prev, action.beforeState.cost as Cost]);
+        break;
+
+      case UndoActionType.CREATE_RISK:
+        setRisks(prev => prev.filter(r => r.id !== action.targetId));
+        break;
+
+      case UndoActionType.EDIT_RISK:
+        setRisks(prev => {
+          const idx = prev.findIndex(r => r.id === action.targetId);
+          if (idx === -1) return prev;
+          const arr = [...prev];
+          arr[idx] = action.beforeState.risk as Risk;
+          return arr;
+        });
+        break;
+
+      case UndoActionType.DELETE_RISK:
+        setRisks(prev => [...prev, action.beforeState.risk as Risk]);
+        break;
+
       // 其他類型的撤消操作...
     }
     
@@ -469,7 +628,61 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       case UndoActionType.DELETE_TASK:
         setTasks(prev => prev.filter(t => t.id !== action.targetId));
         break;
-        
+
+      case UndoActionType.CREATE_RESOURCE:
+        setResources(prev => [...prev, action.afterState.resource as Resource]);
+        break;
+
+      case UndoActionType.EDIT_RESOURCE:
+        setResources(prev => {
+          const idx = prev.findIndex(r => r.id === action.targetId);
+          if (idx === -1) return prev;
+          const arr = [...prev];
+          arr[idx] = action.afterState.resource as Resource;
+          return arr;
+        });
+        break;
+
+      case UndoActionType.DELETE_RESOURCE:
+        setResources(prev => prev.filter(r => r.id !== action.targetId));
+        break;
+
+      case UndoActionType.CREATE_COST:
+        setCosts(prev => [...prev, action.afterState.cost as Cost]);
+        break;
+
+      case UndoActionType.EDIT_COST:
+        setCosts(prev => {
+          const idx = prev.findIndex(c => c.id === action.targetId);
+          if (idx === -1) return prev;
+          const arr = [...prev];
+          arr[idx] = action.afterState.cost as Cost;
+          return arr;
+        });
+        break;
+
+      case UndoActionType.DELETE_COST:
+        setCosts(prev => prev.filter(c => c.id !== action.targetId));
+        break;
+
+      case UndoActionType.CREATE_RISK:
+        setRisks(prev => [...prev, action.afterState.risk as Risk]);
+        break;
+
+      case UndoActionType.EDIT_RISK:
+        setRisks(prev => {
+          const idx = prev.findIndex(r => r.id === action.targetId);
+          if (idx === -1) return prev;
+          const arr = [...prev];
+          arr[idx] = action.afterState.risk as Risk;
+          return arr;
+        });
+        break;
+
+      case UndoActionType.DELETE_RISK:
+        setRisks(prev => prev.filter(r => r.id !== action.targetId));
+        break;
+
       // 其他類型的重做操作...
     }
     
@@ -491,6 +704,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     saveProject,
     saveProjectAs,
     loadProject,
+    loadProjectData,
     updateProject,
     setDirty,
     createTask,
@@ -505,6 +719,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     createRisk,
     updateRisk,
     deleteRisk,
+    manualSnapshot,
     undo,
     redo,
     canUndo,

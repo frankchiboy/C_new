@@ -1,0 +1,17 @@
+{
+  "project": {
+    "name": "軟體開發專案",
+    "description": "示範軟體開發流程",
+    "startDate": "2025-06-01",
+    "endDate": "2025-06-30"
+  },
+  "tasks": [
+    { "name": "需求分析", "startDate": "2025-06-01", "endDate": "2025-06-05", "progress": 0 },
+    { "name": "設計", "startDate": "2025-06-06", "endDate": "2025-06-10", "progress": 0 },
+    { "name": "開發", "startDate": "2025-06-11", "endDate": "2025-06-25", "progress": 0 },
+    { "name": "測試", "startDate": "2025-06-26", "endDate": "2025-06-30", "progress": 0 }
+  ],
+  "resources": [],
+  "costs": [],
+  "risks": []
+}
